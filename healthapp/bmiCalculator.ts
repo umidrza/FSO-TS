@@ -1,4 +1,4 @@
-import { isNotNumber } from "./util";
+import { isNotNumber } from "./util.ts";
 
 const calculateBmi = (height: number, weight: number): string => {
   const heightInMeters = height / 100;
@@ -33,15 +33,17 @@ const parseArguments = (args: string[]): Values => {
   };
 };
 
-try {
-  const { height, weight } = parseArguments(process.argv);
-  console.log(calculateBmi(height, weight));
-} catch (error: unknown) {
-  let errorMessage = "Something went wrong: ";
-  if (error instanceof Error) {
-    errorMessage += error.message;
+if (process.argv[1] === import.meta.filename) {
+  try {
+    const { height, weight } = parseArguments(process.argv);
+    console.log(calculateBmi(height, weight));
+  } catch (error: unknown) {
+    let errorMessage = "Something went wrong: ";
+    if (error instanceof Error) {
+      errorMessage += error.message;
+    }
+    console.log(errorMessage);
   }
-  console.log(errorMessage);
 }
 
 export default calculateBmi;
