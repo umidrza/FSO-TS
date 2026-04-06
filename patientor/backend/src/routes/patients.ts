@@ -1,16 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import patientService from "../services/patientService.ts";
-import express from "express";
-import { toNewPatient } from "../utils/parsers.ts";
+import express, { type Response, type Request } from "express";
+import { errorMiddleware, newPatientParser } from "../middleware.ts";
+import type { NewPatient, Patient } from "../types.ts";
 
 const router = express.Router();
 
 router.get("/", (_req, res) => {
-  res.send(patientService.getNonSensitivePatients());
+  const data = patientService.getNonSensitivePatients();
+  res.send(data);
 });
 
 router.get("/:id", (req, res) => {
   const patient = patientService.getPatientById(req.params.id);
+
   if (patient) {
     res.send(patient);
   } else {
@@ -18,20 +20,11 @@ router.get("/:id", (req, res) => {
   }
 });
 
-router.post('/', (req, res) => {
-  try {
-    const newPatient = toNewPatient(req.body);
-    const addedPatient = patientService.addPatient(newPatient);
-    res.json(addedPatient);
-  } catch (e: unknown) {
-    let errorMessage = 'Something went wrong';
-
-    if (e instanceof Error) {
-      errorMessage += ': ' + e.message;
-    }
-
-    res.status(400).send(errorMessage);
-  }
+router.post('/', newPatientParser, (req: Request<unknown, unknown, NewPatient>, res: Response<Patient>) => {  
+  const addedPatient = patientService.addPatient(req.body);  
+  res.json(addedPatient);
 });
+
+router.use(errorMiddleware);
 
 export default router;
