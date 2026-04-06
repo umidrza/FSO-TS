@@ -12,7 +12,7 @@ export type Patient = {
   ssn: string;
   gender: Gender;
   occupation: string;
-  entries: Entry[];
+  entries?: Entry[];
 };
 
 export type Entry = {
