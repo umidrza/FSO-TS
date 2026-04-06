@@ -24,12 +24,18 @@ export type Entry = {
   description: string;
 };
 
+export const Gender = {
+  Male: 'male',
+  Female: 'female',
+  Other: 'other'
+} as const;
+
+export type Gender = typeof Gender[keyof typeof Gender];
+
 export type NewPatient = Omit<Patient, 'id'>;
 export type NewEntry = Omit<Entry, 'id'>;
 export type NonSensitivePatient = Omit<Patient, 'ssn'>;
 export type PublicPatient = Omit<Patient, 'ssn' | 'entries'>;
 export type NewPatientEntry = Omit<Patient, 'id' | 'entries'>;
 export type NewEntryWithoutType = Omit<Entry, 'id' | 'type'>;
-export type EntryWithoutType = Omit<Entry, 'id'>;
-export type HealthCheckRating = 0 | 1 | 2 | 3;
-export type Gender = 'male' | 'female' | 'other';
+export type EntryWithoutType = Omit<Entry, 'id'>; 
