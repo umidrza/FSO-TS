@@ -40,4 +40,4 @@ export interface Patient extends NewPatient {
   entries?: Entry[];
 }
 
-export type NonSensitivePatient = Omit<Patient, 'ssn'>;
+export type NonSensitivePatient = Omit<Patient, 'ssn' | 'entries'>;
