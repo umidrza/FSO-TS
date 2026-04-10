@@ -1,129 +1,90 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import type { Diagnosis, Patient } from "../../types";
-import patientsService from "../../services/patients";
-import diagnosesService from "../../services/diagnoses";
+import { Male, Female, QuestionMark } from'@mui/icons-material';
+import {  Alert } from '@mui/material';
+import { getErrorMessage } from "../../util";
 
-import { Typography, Card, CardContent, Box, Divider } from "@mui/material";
+import { Patient, Gender, Diagnosis, EntryFormValues } from "../../types";
+import patientService from "../../services/patients";
 
-import MaleIcon from "@mui/icons-material/Male";
-import FemaleIcon from "@mui/icons-material/Female";
-import TransgenderIcon from "@mui/icons-material/Transgender";
-import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
-import WorkIcon from "@mui/icons-material/Work";
-import FavoriteIcon from "@mui/icons-material/Favorite";
+import EntryInfo from "./EntryInfo";
+import AddEntryForm from "./AddEntryForm";
 
-const GenderIcon = ({ gender }: { gender: string }) => {
-  switch (gender) {
-    case "male":
-      return <MaleIcon sx={{ ml: 1 }} />;
-    case "female":
-      return <FemaleIcon sx={{ ml: 1 }} />;
-    default:
-      return <TransgenderIcon sx={{ ml: 1 }} />;
-  }
+type Props = {
+  diagnoses: Diagnosis[],
 };
 
-const PatientPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[] | null>(null);
+const PatientPage = ({ diagnoses }: Props ) => {
+  const [patient, setPatient] = useState<Patient|null>(null);
+  const [formVisible, setFormVisible] = useState(true);
+  const [error, setError] = useState<string |null>(null);
+
+  const getGenderIcon = (gender: Gender) => {
+    if (gender === Gender.Male) {
+      return <Male />;
+    }
+
+    if (gender === Gender.Female) {
+      return <Female />;
+    }
+
+    return <QuestionMark />;
+  };
+
+  const id = useParams().id;
 
   useEffect(() => {
     if (id) {
-      patientsService.getPatient(id).then((data) => setPatient(data));
+      void patientService.getPatient(id).then(data => {
+        setPatient(data);
+      });
     }
   }, [id]);
 
-  useEffect(() => {
-    diagnosesService.getAll().then((data) => setDiagnoses(data));
-  }, []);
+  const onNewEntry = async (values: EntryFormValues, resetter: () => void) => {
+    if (!patient) return null;
+    try {
+      const updatedPatient = await patientService.addEntry(patient.id, values);
+      setPatient(updatedPatient);
+      setFormVisible(false);
+      setError(null);
+      resetter();
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      setError(message);
+    }
+  };
 
-  if (!patient) return <div>Loading...</div>;
+  const closeForm = () => {
+    setFormVisible(false);
+    setError(null);
+  };
+
+  if (!patient) return null;
 
   return (
-    <Box sx={{ maxWidth: 700, margin: "0 auto", mt: 4 }}>
-      <Box display="flex" alignItems="center" mb={2}>
-        <Typography variant="h4">{patient.name}</Typography>
-        <GenderIcon gender={patient.gender} />
-      </Box>
+    <div>
+      <h3>{patient.name} {getGenderIcon(patient.gender)}</h3>
 
-      <Typography>
-        <strong>SSN:</strong> {patient.ssn}
-      </Typography>
-      <Typography>
-        <strong>Date of Birth:</strong> {patient.dateOfBirth}
-      </Typography>
-      <Typography>
-        <strong>Occupation:</strong> {patient.occupation}
-      </Typography>
+      <div>ssn {patient.ssn}</div>
+      <div>occupation: {patient.occupation}</div>
 
-      <Typography variant="h5" gutterBottom>
-        Entries
-      </Typography>
+      {error && <Alert severity="error">{error}</Alert>}
 
-      {!patient.entries || patient.entries.length === 0 ? (
-        <Typography>No entries</Typography>
-      ) : (
-        patient.entries.map((entry) => (
-          <Card key={entry.id} sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="subtitle1">
-                {entry.date}
-                {entry.type === "Hospital" && <MedicalServicesIcon sx={{ ml: 1 }} />}
-                {entry.type === "OccupationalHealthcare" && <WorkIcon sx={{ ml: 1 }} />}
-                {entry.type === "HealthCheck" && <FavoriteIcon sx={{ ml: 1 }} />}
-              </Typography>
+      <AddEntryForm
+        onSubmit={onNewEntry}
+        visible={formVisible}
+        onOpen={() => setFormVisible(true)}
+        onCancel={closeForm}
+        diagnoses={diagnoses}
+      />
 
-              <Typography variant="body1" sx={{ mb: 1 }}>
-                {entry.description}
-              </Typography>
+      <h4>entries</h4>
 
-              {entry.diagnosisCodes && diagnoses && (
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="subtitle2">Diagnoses:</Typography>
-                  <ul>
-                    {entry.diagnosisCodes.map((code) => {
-                      const diagnosis = diagnoses.find((d) => d.code === code);
-                      return (
-                        <li key={code}>
-                          {code}{" "}
-                          {diagnosis ? diagnosis.name : "Unknown diagnosis"}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </Box>
-              )}
-
-              {entry.type === "HealthCheck" && (
-                <Typography variant="body2" color="text.secondary">
-                  Health Check Rating: {entry.healthCheckRating}
-                </Typography>
-              )}
-
-              {entry.type === "OccupationalHealthcare" && entry.sickLeave && (
-                <Typography variant="body2" color="text.secondary">
-                  Sick Leave: {entry.sickLeave.startDate} to {entry.sickLeave.endDate}
-                </Typography>
-              )}
-
-              {entry.type === "Hospital" && entry.discharge && (
-                <Typography variant="body2" color="text.secondary">
-                  Discharge: {entry.discharge.date} - {entry.discharge.criteria}
-                </Typography>
-              )}
-
-              <Divider sx={{ my: 1 }} />
-
-              <Typography variant="body2" color="text.secondary">
-                Specialist: {entry.specialist}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))
+      {patient.entries?.map(e =>
+        <EntryInfo key={e.id} entry={e} diagnoses={diagnoses} />
       )}
-    </Box>
+    </div>
   );
 };
 
